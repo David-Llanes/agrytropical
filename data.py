@@ -1,6 +1,8 @@
 import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
+import random
+from datetime import datetime
 
 _instance = None
 
@@ -9,6 +11,21 @@ def get_supabase_instance():
     if _instance is None:
         _instance = SupabaseDataLayer()
     return _instance
+
+def desenpaquetar_set(data):
+    setxd = set(data)
+    return setxd.pop()
+
+def calcular_total_usd(dato):
+    precio = dato['VariedadMango']['precio']
+    cajas = dato['cajas']
+    return round(precio * cajas, 2)
+
+def calcular_total_mxn(dato, tipo_cambio):
+    precio = dato['VariedadMango']['precio']
+    cajas = dato['cajas']
+    return round(precio * cajas * tipo_cambio, 2)
+
 
 class SupabaseDataLayer:
     def __init__(self):
@@ -35,12 +52,8 @@ class SupabaseDataLayer:
         # Assert we pulled real data.
         if len(data.data) < 1:
             return []
-               
-        # array = [[value for key, value in element.items()] for element in data.data]
         
-        # print(array)
-        # return array
-        print(data.data)
+        print (data.data)
         return data.data
         
     def get_variedades(self):
@@ -52,7 +65,7 @@ class SupabaseDataLayer:
         
         array = [element['variedad'] for element in data.data]
         
-        print(array)
+        # print(array)
         return array
     
     def get_info_manifiesto(self, id):
@@ -68,7 +81,7 @@ class SupabaseDataLayer:
         
         infoManifiesto = infoManifiesto.data[0] | infoCertificado.data[0]
         
-        print(infoManifiesto)
+        # print(infoManifiesto)
         return infoManifiesto
 
     def get_manifiestos(self):
@@ -80,12 +93,11 @@ class SupabaseDataLayer:
         
         array = [element['no_certificate'] for element in data.data]
         
-        print(array)
+        # print(array)
         return array
 
     def insert_manifiesto(self, data, embarque, temp=0):
         noCertificate = data['no_certificate']
-        print(f"Embarque: {embarque}")
         
         try:
             # Inserta un manifiesto
@@ -107,7 +119,6 @@ class SupabaseDataLayer:
     
     def modify_manifiesto(self, data, embarque, temp=0):
         noCertificate = data['no_certificate']
-        print(f"Embarque: {embarque}")
         
         try:
             # Modifica un manifiesto
@@ -139,12 +150,61 @@ class SupabaseDataLayer:
             print(f"Error: {e}")
             return []
     
+    def obtener_tipoDeCambio(self, fechaCarga):
+        fecha = datetime.strptime(fechaCarga, '%Y-%m-%d')
+        seed = int(fecha.strftime('%Y%m%d'))
+        random.seed(seed)
+        
+        tipoCambio = round(random.uniform(16.50, 17.20), 2)
+        print (f"Tipo de cambio: {tipoCambio}")
+        return tipoCambio
+    
+    def get_costos(self, id):
+        # Método para obtener
+        data = self.client.table("ResumenCarga").select("variedad, calibre,cajas, VariedadMango(precio), CertificadoDeEmbarque(fecha_carga)").eq("no_certificate", id).execute()
+        
+        # Assert we pulled real data.
+        if len(data.data) < 1:
+            return []
+        
+        print(data.data)
+        
+        fecha = data.data[0]['CertificadoDeEmbarque']['fecha_carga']
+        tipoCambio = self.obtener_tipoDeCambio(fecha)
+        
+        # Sacar la cantidad de cajas por variedad
+        cajasPorVariedad = { dato['variedad']: {'cajas': sum([elem['cajas'] for elem in data.data if elem['variedad'] == dato['variedad']]), 'precio': desenpaquetar_set([dato['VariedadMango']['precio'] for elem in data.data if elem['variedad'] == dato['variedad']])} for dato in data.data }
+        
+        # Sacar costos por variedad
+        costosPorVariedad = {variedad: {'cajas': cajasPorVariedad[variedad]['cajas'], 'precio': cajasPorVariedad[variedad]['precio'], 'total_usd': round(cajasPorVariedad[variedad]['cajas'] * cajasPorVariedad[variedad]['precio'],2), 'total_mxn': round(cajasPorVariedad[variedad]['cajas'] * cajasPorVariedad[variedad]['precio'] * tipoCambio, 2)} for variedad in cajasPorVariedad}
+        
+        
+        for dato in data.data:
+            del(dato['CertificadoDeEmbarque'])
+            dato['total_usd'] = calcular_total_usd(dato)
+            dato['total_mxn'] = calcular_total_mxn(dato, tipoCambio)
+        
+        resultado = {
+            "no_certificate": id,
+            "fecha_carga": fecha,
+            "tipo_cambio": tipoCambio,
+            "costos": data.data,
+            "costo_total_usd": sum([dato['total_usd'] for dato in data.data]),
+            "costo_total_mxn": sum([dato['total_mxn'] for dato in data.data]),
+            "costosPorVariedad": costosPorVariedad,
+        }
+        
+        # print(resultado)
+        return resultado
+    
+    
     
         
         
 if __name__ == "__main__":
     test = SupabaseDataLayer()
-    test.get_resumen(4379065)
+    test.get_costos(4379065)
+    # test.obtener_tipoDeCambio('2024-05-02')
 
 
 

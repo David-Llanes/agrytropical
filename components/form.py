@@ -28,7 +28,8 @@ class Form(ft.UserControl):
 
       def handle_submit(e):
         print(f"handle_submit e.data: {e.data}")
-        load_data()
+        if self.buscar.value:
+          load_data()
 
       def handle_tap(e):
         print(f"handle_tap")

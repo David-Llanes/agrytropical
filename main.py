@@ -20,7 +20,7 @@ def main(page: ft.Page) -> None:
     
     
     t = ft.Tabs(
-        selected_index=1,
+        selected_index=0,
         animation_duration=300,
         
         tabs=[
@@ -39,7 +39,7 @@ def main(page: ft.Page) -> None:
                 text="Registrar",
                 icon=ft.icons.ADD,
                 content=FormRegistro(page),
-            )
+            ),
         ],
         expand=1,        
     )

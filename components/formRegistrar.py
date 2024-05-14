@@ -194,7 +194,7 @@ class FormRegistro(ft.UserControl):
       self.temp = CustomTextField(label="Temperatura en °C", value="")
       self.totalPallets = CustomTextField(label="Total de pallets", value="")
       
-      self.btnGuardar = ft.ElevatedButton("Guardar", height=50,disabled=True, col=12, elevation=1, on_click=self.guardarManifiesto, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10)))
+      self.btnGuardar = ft.ElevatedButton("Guardar", height=50, disabled=True, col=12, elevation=1, on_click=self.guardarManifiesto, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10)))
       
       self.searchBar = ft.TextField(
         label="Buscar",
