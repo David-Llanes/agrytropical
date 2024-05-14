@@ -159,7 +159,8 @@ class Form(ft.UserControl):
                     ft.IconButton(
                       tooltip="Exportar a Excel",
                       icon=ft.icons.FILE_DOWNLOAD,
-                      icon_color=ft.colors.GREEN_900
+                      icon_color=ft.colors.GREEN_900,
+                      on_click=self.handle_export_excel
                     ),
                   ])
                 )
@@ -176,6 +177,17 @@ class Form(ft.UserControl):
       )
       
       self.content = ft.ResponsiveRow(controls=[self.form, self.table], spacing=0)
+    
+    
+    def handle_export_excel(self, e):
+      if self.noCertificate.value:
+        result = data.download_resumen(int(self.noCertificate.value))
+      
+        if result:
+          print(result)
+      else:
+        print("No hay datos para exportar")
+      
       
     def build(self):
       return self.content

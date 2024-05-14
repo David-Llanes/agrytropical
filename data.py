@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 import random
 from datetime import datetime
+import pandas as pd
+from openpyxl import load_workbook
 
 _instance = None
 
@@ -81,7 +83,7 @@ class SupabaseDataLayer:
         
         infoManifiesto = infoManifiesto.data[0] | infoCertificado.data[0]
         
-        # print(infoManifiesto)
+        print(infoManifiesto)
         return infoManifiesto
 
     def get_manifiestos(self):
@@ -198,13 +200,146 @@ class SupabaseDataLayer:
         return resultado
     
     
+    def download_costos(self, id: int):
+        data = self.get_costos(id)
+        
+        if not data:
+            return None
+        
+        noCertificate = data['no_certificate']
+        fechaCarga = data['fecha_carga']
+
+        costos = data['costos']
+        for dato in costos:
+            dato['Variedad'] = dato['variedad']
+            dato['Calibre'] = dato['calibre']
+            dato['Cajas'] = dato['cajas']
+            dato['Precio'] = dato['VariedadMango']['precio']
+            dato['Total USD'] = dato['total_usd']
+            dato['Total MXN'] = dato['total_mxn']
+            
+            del(dato['VariedadMango'])
+            del(dato['variedad'])
+            del(dato['calibre'])
+            del(dato['cajas'])
+            del(dato['total_usd'])
+            del(dato['total_mxn'])
+        
+        costosPorVariedad = data['costosPorVariedad']
+
+        # Crear un DataFrame para la sección de costos
+        costos_df = pd.DataFrame(costos)
+
+        # Crear un DataFrame para costos por variedad
+        costos_variedad_df = pd.DataFrame(costosPorVariedad).transpose().reset_index().rename(columns={'index': 'Variedad', 'cajas': 'Cajas', 'precio': 'Precio', 'total_usd': 'Total USD', 'total_mxn': 'Total MXN'})
+
+        # Crear un DataFrame para los valores generales
+        general_df = pd.DataFrame({
+            'No. Certificado': [data['no_certificate']],
+            'Fecha de Carga': [data['fecha_carga']],
+            'Tipo de cambio': [data['tipo_cambio']],
+            'Costo total en USD': [data['costo_total_usd']],
+            'Costo total en MXN': [data['costo_total_mxn']]
+        })
+
+        direccion = f"D:/Agrytropical/CostosPorMaquila/{fechaCarga}_{noCertificate}_costos.xlsx"
+        
+        # # Crear un archivo Excel con los DataFrames en diferentes hojas
+        # with pd.ExcelWriter(f"{fechaCarga}_{noCertificate}_costos.xlsx", engine='openpyxl') as writer:
+        #     general_df.to_excel(writer, index=False, sheet_name='General')
+        #     costos_df.to_excel(writer, index=False, sheet_name='Costos')
+        #     costos_variedad_df.to_excel(writer, index=False, sheet_name='Costos por Variedad')
+        
+        # Crear un archivo Excel con las tres tablas en la misma hoja
+        with pd.ExcelWriter(direccion, engine='openpyxl') as writer:
+            # Escribir valores generales
+            general_df.to_excel(writer, index=False, sheet_name='Costos por maquila', startrow=2)
+            
+            # Escribir tabla de costos
+            startrow = len(general_df) + 4  # Dejar 3 filas de espacio
+            inicioTabla2 = f"A{startrow + 1}"
+            costos_df.to_excel(writer, index=False, sheet_name='Costos por maquila', startrow=startrow + 1)
+            
+            # Escribir tabla de costos por variedad
+            startrow = startrow + len(costos_df) + 4  # Dejar 3 filas de espacio
+            inicioTabla3 = f"A{startrow + 1}"
+            costos_variedad_df.to_excel(writer, index=False, sheet_name='Costos por maquila', startrow=startrow + 1)
+
+        # Cargar el archivo Excel para agregar títulos
+        wb = load_workbook(direccion)
+        ws = wb['Costos por maquila']
+
+        # Agregar títulos encima de cada tabla
+        ws['A1'] = f"Costos por maquila: {noCertificate}"
+        ws['A2'] = 'Resumen de costos:'
+        ws[f"{inicioTabla2}"] = 'Costos por variedad y calibre:'
+        ws[f"{inicioTabla3}"] = 'Costos por variedad:'
+
+        # Guardar el archivo Excel
+        wb.save(direccion)
+
+        # print(f"Archivo Excel guardado en 'D:/Agrytropical/CostosPorMaquila/{fechaCarga}_{noCertificate}_costos.xlsx")
+        return f"Archivo Excel guardado en 'D:/Agrytropical/CostosPorMaquila/{fechaCarga}_{noCertificate}_costos.xlsx"
+    
+    # Método para descargar el resumen de carga
+    def download_resumen(self, id: int):
+        manifiesto = self.get_info_manifiesto(id)
+        
+        if not manifiesto:
+            return None
+        
+        noCertificate = manifiesto['no_certificate']
+        fechaCarga = manifiesto['fecha_carga']
+
+        # Crear un DataFrame para el manifiesto
+        infoManifiesto = pd.DataFrame({
+            'No. Certificado': [manifiesto['no_certificate']],
+            'No. Factura': [manifiesto['no_factura']],
+            'No. Embarque': [manifiesto['no_embarque']],
+            'Fecha de Carga': [manifiesto['fecha_carga']],
+            'Temperatura': [manifiesto['temp']],
+            'Puerto de salida': [manifiesto['export_port']],
+            'Puerto de llegada': [manifiesto['entry_port']],
+            'Empaque': [manifiesto['empaque']],
+            'Total de pallets': [manifiesto['total_pallets']],
+        })
+        
+        # Crear un DataFrame para el resumen de la carga
+        resumen = self.get_resumen(id)
+        resumen_df = pd.DataFrame(resumen).rename(columns={'id': 'ID', 'no_certificate': 'No. Certificado', 'marca_caja': 'Marca de caja', 'calibre': 'Calibre', 'variedad': 'Variedad', 'cajas': 'Cajas', 'calidad': 'Calidad'})
+
+        direccion = f"D:/Agrytropical/InformacionCarga/{fechaCarga}_{noCertificate}_resumenCarga.xlsx"
+        
+        # Crear un archivo Excel con las tres tablas en la misma hoja
+        with pd.ExcelWriter(direccion, engine='openpyxl') as writer:
+            # Escribir valores generales
+            infoManifiesto.to_excel(writer, index=False, sheet_name='Resumen de carga', startrow=2)
+            
+            # Escribir tabla de costos
+            startrow = len(infoManifiesto) + 4  # Dejar 3 filas de espacio
+            inicioTabla2 = f"A{startrow + 1}"
+            resumen_df.to_excel(writer, index=False, sheet_name='Resumen de carga', startrow=startrow + 1)
+
+        # Cargar el archivo Excel para agregar títulos
+        wb = load_workbook(direccion)
+        ws = wb['Resumen de carga']
+
+        # Agregar títulos encima de cada tabla
+        ws['A1'] = f"Resumen de carga: {noCertificate}"
+        ws['A2'] = 'Información relacionada'
+        ws[f"{inicioTabla2}"] = 'Cantidad de cajas por variedad y calibre'
+
+        # Guardar el archivo Excel
+        wb.save(direccion)
+
+        # print(f"Archivo Excel guardado en {direccion}")
+        return f"Archivo Excel guardado en {direccion}"
     
         
         
 if __name__ == "__main__":
     test = SupabaseDataLayer()
-    test.get_costos(4379065)
-    # test.obtener_tipoDeCambio('2024-05-02')
+    # test.download_resumen(4379065)
 
 
 

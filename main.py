@@ -14,7 +14,7 @@ def main(page: ft.Page) -> None:
     page.horizontal_alignment = ft.MainAxisAlignment.CENTER
     page.theme = ft.theme.Theme(color_scheme_seed="green")
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.title = "Agrytropical Supply"
+    # page.title = "Agrytropical Supply"
     page.window_resizable = False
     page.padding = 0
     

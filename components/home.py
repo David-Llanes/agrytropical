@@ -29,7 +29,9 @@ class Home(ft.UserControl):
 
       def handle_tap(e):
         print(f"handle_tap")
-        
+      
+      
+      self.resumenCostos = {}
       
       # Campos del formulario
       self.buscar = ft.SearchBar(
@@ -58,7 +60,7 @@ class Home(ft.UserControl):
       
       self.exportExcel = ft.IconButton(
         tooltip="Exportar a Excel",
-        
+        on_click=self.handle_export_excel,
         icon=ft.icons.FILE_DOWNLOAD,
         icon_color=ft.colors.GREEN_900
       )
@@ -142,8 +144,17 @@ class Home(ft.UserControl):
       )
       
       self.content = ft.ResponsiveRow(controls=[self.form, self.table], spacing=0)
+    
+    def handle_export_excel(self, e):
+      print("Exportar a Excel")
+      result = data.download_costos(int(self.noCertificate.value))
       
+      if result:
+        print(result)
+    
     def handle_reset(self, e):
+      self.resumenCostos = {}
+      
       self.noCertificate.value = ""
       self.fechaCarga.value = ""
       self.tipoCambio.value = ""
@@ -157,6 +168,7 @@ class Home(ft.UserControl):
       self.costoTotalUSD.disabled = True
       self.costoTotalMXN.disabled = True
 
+      self.exportExcel.disabled = True
       self.dataTable.rows = []
       self.costosVariedadTable.rows = []
       self.update()
@@ -167,25 +179,26 @@ class Home(ft.UserControl):
       self.tipoCambio.disabled = False
       self.costoTotalUSD.disabled = False
       self.costoTotalMXN.disabled = False
+      self.exportExcel.disabled = False
       
     def load_data(self):
       self.activar_campos()
       # Obtener el resumen de la carga y costos
-      resumenCostos = data.get_costos(self.buscar.value)
+      self.resumenCostos = data.get_costos(self.buscar.value)
       
-      if not resumenCostos:
+      if not self.resumenCostos:
         self.update()
         return
       
-      self.noCertificate.value = resumenCostos['no_certificate']
-      self.fechaCarga.value = resumenCostos['fecha_carga']
-      self.tipoCambio.value = resumenCostos['tipo_cambio']
-      self.costoTotalUSD.value = resumenCostos['costo_total_usd']
-      self.costoTotalMXN.value = resumenCostos['costo_total_mxn']
+      self.noCertificate.value = self.resumenCostos['no_certificate']
+      self.fechaCarga.value = self.resumenCostos['fecha_carga']
+      self.tipoCambio.value = self.resumenCostos['tipo_cambio']
+      self.costoTotalUSD.value = self.resumenCostos['costo_total_usd']
+      self.costoTotalMXN.value = self.resumenCostos['costo_total_mxn']
       
       # Llenar la primera tabla
       registros = []
-      for i in resumenCostos["costos"]:
+      for i in self.resumenCostos["costos"]:
         registros.append(ft.DataRow(
           cells=[
             ft.DataCell(ft.Text(i["variedad"])),
@@ -199,14 +212,14 @@ class Home(ft.UserControl):
         
       # Llenar la segunda tabla
       registrosVariedad = []
-      for i in resumenCostos["costosPorVariedad"]:
+      for i in self.resumenCostos["costosPorVariedad"]:
         registrosVariedad.append(ft.DataRow(
           cells=[
             ft.DataCell(ft.Text(i)),
-            ft.DataCell(ft.Text(resumenCostos["costosPorVariedad"][i]["cajas"])),
-            ft.DataCell(ft.Text(resumenCostos["costosPorVariedad"][i]["precio"])),
-            ft.DataCell(ft.Text(resumenCostos["costosPorVariedad"][i]["total_usd"])),
-            ft.DataCell(ft.Text(resumenCostos["costosPorVariedad"][i]["total_mxn"])),
+            ft.DataCell(ft.Text(self.resumenCostos["costosPorVariedad"][i]["cajas"])),
+            ft.DataCell(ft.Text(self.resumenCostos["costosPorVariedad"][i]["precio"])),
+            ft.DataCell(ft.Text(self.resumenCostos["costosPorVariedad"][i]["total_usd"])),
+            ft.DataCell(ft.Text(self.resumenCostos["costosPorVariedad"][i]["total_mxn"])),
           ]
         ))
         
