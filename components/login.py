@@ -19,7 +19,7 @@ class Login(ft.UserControl):
     def validate(self, e: ft.ControlEvent):
         if all([self.txtUsername.value, self.txtPassword.value]):
             self.btnLogin.disabled = False
-            self.page.go('/home')
+            # self.page.go('/home')
         else:
             self.btnLogin.disabled = True
 

@@ -71,6 +71,8 @@ class FormRegistro(ft.UserControl):
         # Si hay datos, llenar los campos para editarse
         # Limpiar la tabla
         self.dataTable.rows = []
+        self.addRow.disabled = False
+        self.noCertificate.read_only = True
         self.editarRegistroExistente(editData)
         page.update()
         
@@ -205,7 +207,7 @@ class FormRegistro(ft.UserControl):
       )
       
       # BOTON Q ABRE DIALOG PARA AGREGAR REGISTROS
-      self.addRow = ft.ElevatedButton("Agregar registro", height=50, elevation=1, on_click=open_dlg_modal_add, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10)))
+      self.addRow = ft.ElevatedButton("Agregar registro", disabled=True, height=50, elevation=1, on_click=open_dlg_modal_add, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10)))
       
       
       # Tabla de datos
@@ -357,6 +359,7 @@ class FormRegistro(ft.UserControl):
       print("Agregar nuevo registro")
       self.noCertificate.value = ""
       self.noCertificate.disabled = False
+      self.noCertificate.read_only = False
       self.fechaCarga.disabled = False
       self.datePicker.value = datetime.datetime.now()
       self.txtFechaCarga.value = ""
